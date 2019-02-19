@@ -56,10 +56,31 @@ void Execute () {
 	this->UpdateRawGyro();
 
 	// TODO:
-	// - Subtract accel/gyro offsets;
-	// - Readable accel/gyro data;
-	// - Accel/Gyro angles;
 	// - Complementary filter angles.
+
+	// Computing readable accel/gyro data
+	accX = (float)(rawAccX - accXOffset) / ACCEL_TRANSFORMATION_NUMBER;
+	accY = (float)(rawAccY - accYOffset) / ACCEL_TRANSFORMATION_NUMBER;
+	accZ = (float)(rawAccZ - accZOffset) / ACCEL_TRANSFORMATION_NUMBER;
+	gyroX = (float)(rawGyroX - gyroXOffset) / GYRO_TRANSFORMATION_NUMBER;
+	gyroY = (float)(rawGyroY - gyroYOffset) / GYRO_TRANSFORMATION_NUMBER;
+	gyroZ = (float)(rawGyroZ - gyroZOffset) / GYRO_TRANSFORMATION_NUMBER;
+
+	// Computing accel angles
+	angAccX = atan2(accY, accZ + abs(accX)) * RAD_TO_DEG;
+	angAccY = atan2(accX, accZ + abs(accY)) * (-RAD_TO_DEG);
+	angAccZ = atan2(-accY, -(accX + abs(accZ))) * RAD_TO_DEG;
+
+	// Computing gyro angles
+	dt = (millis() - intervalStart) * 0.001;
+	angGyroX += gyroX * dt;
+	angGyroY += gyroY * dt;
+	angGyroZ += gyroZ * dt;
+
+	// Computing complementary filter angles
+	angX = (filterAccelCoeff * angAccX) + (filterGyroCoeff * angGyroX);
+	angY = (filterAccelCoeff * angAccY) + (filterGyroCoeff * angGyroY);
+	angZ = (filterAccelCoeff * angAccZ) + (filterGyroCoeff * angGyroZ);
 
 	// Reseting the integration timer
 	intervalStart = millis();

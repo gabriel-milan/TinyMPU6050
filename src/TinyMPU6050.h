@@ -41,6 +41,10 @@
 #define GYRO_PREOFFSET_MAGIC_NUMBER     4
 #define ACCEL_DEADZONE                  8
 #define GYRO_DEADZONE                   1
+// For execution
+#define ACCEL_TRANSFORMATION_NUMBER     16384.0
+#define GYRO_TRANSFORMATION_NUMBER      65.5
+#define RAD_TO_DEG                      180.0 / PI
 
 /*
  *	Class
