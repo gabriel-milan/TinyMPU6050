@@ -31,6 +31,18 @@
 #define MPU6050_GYRO_XOUT_H		0x43	// Initial register address for gyro data
 
 /*
+ *  Macros
+ */
+// For calibration
+#define DISCARDED_MEASURES              100
+#define CALIBRATION_MEASURES            5000
+#define CHECKING_MEASURES               10
+#define ACCEL_PREOFFSET_MAGIC_NUMBER    8
+#define GYRO_PREOFFSET_MAGIC_NUMBER     4
+#define ACCEL_DEADZONE                  8
+#define GYRO_DEADZONE                   1
+
+/*
  *	Class
  */
 class MPU6050 {
@@ -46,17 +58,29 @@ class MPU6050 {
 		// Setup method
 		void Initialize ();
 
+        // Method that updates all attributes
+        void Execute ();
+
+        // Raw data update methods
+        void UpdateRawAccel ();
+        void UpdateRawGyro ();
+
 		// Register write method
 		void RegisterWrite (byte registerAddress, byte data);
 
-		// Calibrating gyroscope offsets method
-		void CalibrateGyro ();
+		// Calibrating MPU-6050 method
+		void Calibrate ();
 
 		// Gets and sets
         float GetGyroXOffset () { return gyroXOffset };
         float GetGyroYOffset () { return gyroYOffset };
         float GetGyroZOffset () { return gyroZOffset };
         void SetGyroOffsets (float x, float y, float z);
+
+        float GetAccXOffset () { return accXOffset };
+        float GetAccYOffset () { return accYOffset };
+        float GetAccZOffset () { return accZOffset };
+        void SetAccOffsets (float x, float y, float z);
 
         int16_t GetRawAccX () { return rawAccX };
         int16_t GetRawAccY () { return rawAccY };
@@ -98,6 +122,9 @@ class MPU6050 {
 
 		// Gyroscope offsets
 		float gyroXOffset, gyroYOffset, gyroZOffset;
+
+        // Accelerometer offsets
+        float accXOffset, accYOffset, accZOffset;
 
 		// Raw accel and gyro data
 		int16_t rawAccX, rawAccY, rawAccZ, rawGyroX, rawGyroY, rawGyroZ;
