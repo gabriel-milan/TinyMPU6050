@@ -16,11 +16,11 @@ MPU6050::MPU6050(TwoWire &w) {
 /*
  *	Initialization method
  */
-void Initialize () {
+void MPU6050::Initialize () {
 
 	// Setting attributes with default values
-	filterAccelCoeff = 0.03f;
-	filterGyroCoeff = 0.97f;
+	filterAccelCoeff = DEFAULT_ACCEL_COEFF;
+	filterGyroCoeff = DEFAULT_GYRO_COEFF;
 
 	// Setting sample rate divider
 	RegisterWrite(MPU6050_SMPLRT_DIV, 0x00);
@@ -49,7 +49,7 @@ void Initialize () {
 /*
  *	Method that executes all readings and updates all attributes
  */
-void Execute () {
+void MPU6050::Execute () {
 
 	// Updating raw data before processing it
 	this->UpdateRawAccel();
@@ -66,10 +66,12 @@ void Execute () {
 	gyroY = (float)(rawGyroY - gyroYOffset) / GYRO_TRANSFORMATION_NUMBER;
 	gyroZ = (float)(rawGyroZ - gyroZOffset) / GYRO_TRANSFORMATION_NUMBER;
 
+	float auxAccZ = (float)(ACCEL_TRANSFORMATION_NUMBER - rawAccZ - accZOffset) / ACCEL_TRANSFORMATION_NUMBER;
+
 	// Computing accel angles
-	angAccX = atan2(accY, accZ + abs(accX)) * RAD_TO_DEG;
-	angAccY = atan2(accX, accZ + abs(accY)) * (-RAD_TO_DEG);
-	angAccZ = atan2(-accY, -(accX + abs(accZ))) * RAD_TO_DEG;
+	angAccX = (atan2(-accY, -auxAccZ)) * RAD_TO_DEG;
+	angAccY = (atan2(-accX, -auxAccZ)) * RAD_TO_DEG;
+	angAccZ = (atan2(-accY, -accX)) * RAD_TO_DEG;
 
 	// Computing gyro angles
 	dt = (millis() - intervalStart) * 0.001;
@@ -78,9 +80,9 @@ void Execute () {
 	angGyroZ += gyroZ * dt;
 
 	// Computing complementary filter angles
-	angX = (filterAccelCoeff * angAccX) + (filterGyroCoeff * angGyroX);
-	angY = (filterAccelCoeff * angAccY) + (filterGyroCoeff * angGyroY);
-	angZ = (filterAccelCoeff * angAccZ) + (filterGyroCoeff * angGyroZ);
+	angX = (filterAccelCoeff * angAccX) + (filterGyroCoeff * (angX + gyroX * dt));
+	angY = (filterAccelCoeff * angAccY) + (filterGyroCoeff * (angY + gyroY * dt));
+	angZ = (filterAccelCoeff * angAccZ) + (filterGyroCoeff * (angZ + gyroZ * dt));
 
 	// Reseting the integration timer
 	intervalStart = millis();
@@ -89,7 +91,7 @@ void Execute () {
 /*
  *	Raw accel data update method
  */
-void UpdateRawAccel () {
+void MPU6050::UpdateRawAccel () {
 
 	// Beginning transmission for MPU6050
 	wire->beginTransmission(MPU6050_ADDRESS);
@@ -110,7 +112,7 @@ void UpdateRawAccel () {
 /*
  *	Raw gyro data update method
  */
-void UpdateRawGyro () {
+void MPU6050::UpdateRawGyro () {
 
 	// Beginning transmission for MPU6050
 	wire->beginTransmission(MPU6050_ADDRESS);
@@ -131,7 +133,7 @@ void UpdateRawGyro () {
 /*
  *	Register write method
  */
-void RegisterWrite (byte registerAddress, byte data) {
+void MPU6050::RegisterWrite (byte registerAddress, byte data) {
 
 	// Starting transmission for MPU6050
 	wire->beginTransmission(MPU6050_ADDRESS);
@@ -149,7 +151,7 @@ void RegisterWrite (byte registerAddress, byte data) {
 /*
  *	MPU-6050 calibration method inspired by https://42bots.com/tutorials/arduino-script-for-mpu-6050-auto-calibration/
  */
-void Calibrate () {
+void MPU6050::Calibrate () {
 
 	// Reading data (DISCARDED_MEASURES) times without storing
 	for (byte i = 0; i < DISCARDED_MEASURES; i++) {
@@ -178,15 +180,17 @@ void Calibrate () {
 	int16_t preOffAccX, preOffAccY, preOffAccZ, preOffGyroX, preOffGyroY, preOffGyroZ = 0;
 	preOffAccX = (sumAccX / CALIBRATION_MEASURES) / ACCEL_PREOFFSET_MAGIC_NUMBER;
 	preOffAccY = (sumAccY / CALIBRATION_MEASURES) / ACCEL_PREOFFSET_MAGIC_NUMBER;
-	preOffAccZ = (16384 - (sumAccZ / CALIBRATION_MEASURES)) / ACCEL_PREOFFSET_MAGIC_NUMBER;
+	preOffAccZ = (ACCEL_TRANSFORMATION_NUMBER - (sumAccZ / CALIBRATION_MEASURES)) / ACCEL_PREOFFSET_MAGIC_NUMBER;
 	preOffGyroX = (sumGyroX / CALIBRATION_MEASURES) / GYRO_PREOFFSET_MAGIC_NUMBER;
 	preOffGyroY = (sumGyroY / CALIBRATION_MEASURES) / GYRO_PREOFFSET_MAGIC_NUMBER;
 	preOffGyroZ = (sumGyroZ / CALIBRATION_MEASURES) / GYRO_PREOFFSET_MAGIC_NUMBER;
 
+	long loopCount = 0;
+	bool calibrated = false;
 	// Checking if readings are on the deadzone. If they are not, fix them
 	while (true) {
 
-		// Control variable
+		// Control variables
 		byte ready = 0;
 
 		// Setting sums to zero
@@ -209,43 +213,75 @@ void Calibrate () {
 		// Computing averages
 		sumAccX = (sumAccX / CALIBRATION_MEASURES);
 		sumAccY = (sumAccY / CALIBRATION_MEASURES);
-		sumAccZ = (16384 - (sumAccZ / CALIBRATION_MEASURES));
+		sumAccZ = (ACCEL_TRANSFORMATION_NUMBER - (sumAccZ / CALIBRATION_MEASURES));
 		sumGyroX = (sumGyroX / CALIBRATION_MEASURES);
 		sumGyroY = (sumGyroY / CALIBRATION_MEASURES);
 		sumGyroZ = (sumGyroZ / CALIBRATION_MEASURES);
 
 		// Checking if readings are on the deadzone and, eventually, fixing preOffsets
-		if (abs(sumAccX) <= ACCEL_DEADZONE) ready++;
-		else preOffAccX = preOffAccX - sumAccX / ACCEL_DEADZONE;
+		if (abs(sumAccX) <= ACCEL_DEADZONE_THRESHOLD) ready++;
+		else {
+			preOffAccX = preOffAccX - sumAccX / ACCEL_DEADZONE_THRESHOLD;
+		}
 
-		if (abs(sumAccY) <= ACCEL_DEADZONE) ready++;
-		else preOffAccY = preOffAccY - sumAccY / ACCEL_DEADZONE;
+		if (abs(sumAccY) <= ACCEL_DEADZONE_THRESHOLD) ready++;
+		else {
+			preOffAccY = preOffAccY - sumAccY / ACCEL_DEADZONE_THRESHOLD;
+		}
 
-		if (abs(16384 - sumAccZ) <= ACCEL_DEADZONE) ready++;
-		else preOffAccZ = preOffAccZ - sumAccZ / ACCEL_DEADZONE;
+		if (abs(ACCEL_TRANSFORMATION_NUMBER - sumAccZ) <= ACCEL_DEADZONE_THRESHOLD) ready++;
+		else {
+			preOffAccZ = preOffAccZ - (ACCEL_TRANSFORMATION_NUMBER - sumAccZ) * (1 / ACCEL_DEADZONE_THRESHOLD);
+		}
 
-		if (abs(sumGyroX) <= GYRO_DEADZONE) ready++;
-		else preOffGyroX = preOffGyroX - sumGyroX / (GYRO_DEADZONE + 1);
+		if (abs(sumGyroX) <= GYRO_DEADZONE_THRESHOLD) ready++;
+		else {
+			preOffGyroX = preOffGyroX - sumGyroX / (GYRO_DEADZONE_THRESHOLD + 1);
+		}
 
-		if (abs(sumGyroY) <= GYRO_DEADZONE) ready++;
-		else preOffGyroY = preOffGyroY - sumGyroY / (GYRO_DEADZONE + 1);
+		if (abs(sumGyroY) <= GYRO_DEADZONE_THRESHOLD) ready++;
+		else {
+			preOffGyroY = preOffGyroY - sumGyroY / (GYRO_DEADZONE_THRESHOLD + 1);
+		}
 
-		if (abs(sumGyroZ) <= GYRO_DEADZONE) ready++;
-		else preOffGyroZ = preOffGyroZ - sumGyroZ / (GYRO_DEADZONE + 1);
+		if (abs(sumGyroZ) <= GYRO_DEADZONE_THRESHOLD) ready++;
+		else {
+			preOffGyroZ = preOffGyroZ - sumGyroZ / (GYRO_DEADZONE_THRESHOLD + 1);
+		}
+
+		loopCount++;
 
 		// Checking if everything's ready
-		if (ready == 6) break;
+		if (ready == 6) {
+			calibrated = true;
+			break;
+		}
+		if (loopCount >= DEADZONE_ATTEMPTS) break;
 	}
 
-	// Setting the offsets
-	this->SetAccOffsets(preOffAccX, preOffAccY, preOffAccZ);
-	this->SetGyroOffsets(preOffGyroX, preOffGyroY, preOffGyroZ);
+	if (calibrated == false) {
+		this->Calibrate();
+	}
+	else {
+
+		// Setting the offsets
+		this->SetAccOffsets(preOffAccX, preOffAccY, preOffAccZ);
+		this->SetGyroOffsets(preOffGyroX, preOffGyroY, preOffGyroZ);
+
+		// Executing one loop
+		this->Execute();
+
+		// Setting angle as accAngle
+		angX = this->GetAngAccX();
+		angY = this->GetAngAccY();
+		angZ = this->GetAngAccZ();
+	}
 }
 
 /*
  *	Set function for gyro offsets
  */
-void SetGyroOffsets (float x, float y, float z) {
+void MPU6050::SetGyroOffsets (float x, float y, float z) {
 
 	// Setting offsets
 	gyroXOffset = x;
@@ -256,7 +292,7 @@ void SetGyroOffsets (float x, float y, float z) {
 /*
  *	Set function for accel offsets
  */
-void SetAccOffsets (float x, float y, float z) {
+void MPU6050::SetAccOffsets (float x, float y, float z) {
 
 	// Setting offsets
 	accXOffset = x;
@@ -267,7 +303,7 @@ void SetAccOffsets (float x, float y, float z) {
 /*
  *	Set function for the acc coefficient on complementary filter
  */
-void SetFilterAccCoeff (float coeff) {
+void MPU6050::SetFilterAccCoeff (float coeff) {
 
 	// Setting coefficient
 	filterAccelCoeff = coeff;
@@ -276,7 +312,7 @@ void SetFilterAccCoeff (float coeff) {
 /*
  *	Set function for the gyro coefficient on complementary filter
  */
-void SetFilterGyroCoeff (float coeff) {
+void MPU6050::SetFilterGyroCoeff (float coeff) {
 
 	// Setting coefficient
 	filterGyroCoeff = coeff;

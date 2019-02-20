@@ -33,18 +33,23 @@
 /*
  *  Macros
  */
+// For execution
+#define ACCEL_TRANSFORMATION_NUMBER     16384
+#define GYRO_TRANSFORMATION_NUMBER      65.536
+// For digital filter
+#define DEFAULT_ACCEL_COEFF             0.02f
+#define DEFAULT_GYRO_COEFF              0.98f
 // For calibration
 #define DISCARDED_MEASURES              100
 #define CALIBRATION_MEASURES            5000
-#define CHECKING_MEASURES               10
+#define CHECKING_MEASURES               50
 #define ACCEL_PREOFFSET_MAGIC_NUMBER    8
 #define GYRO_PREOFFSET_MAGIC_NUMBER     4
-#define ACCEL_DEADZONE                  8
-#define GYRO_DEADZONE                   1
-// For execution
-#define ACCEL_TRANSFORMATION_NUMBER     16384.0
-#define GYRO_TRANSFORMATION_NUMBER      65.5
-#define RAD_TO_DEG                      180.0 / PI
+#define ACCEL_DEADZONE                  0.002 // m/s²
+#define GYRO_DEADZONE                   0.015 // Degrees/second
+#define ACCEL_DEADZONE_THRESHOLD        ACCEL_DEADZONE * ACCEL_TRANSFORMATION_NUMBER
+#define GYRO_DEADZONE_THRESHOLD         GYRO_DEADZONE * GYRO_TRANSFORMATION_NUMBER
+#define DEADZONE_ATTEMPTS               300
 
 /*
  *	Class
@@ -76,43 +81,43 @@ class MPU6050 {
 		void Calibrate ();
 
 		// Gets and sets
-        float GetGyroXOffset () { return gyroXOffset };
-        float GetGyroYOffset () { return gyroYOffset };
-        float GetGyroZOffset () { return gyroZOffset };
+        float GetGyroXOffset () { return gyroXOffset; };
+        float GetGyroYOffset () { return gyroYOffset; };
+        float GetGyroZOffset () { return gyroZOffset; };
         void SetGyroOffsets (float x, float y, float z);
 
-        float GetAccXOffset () { return accXOffset };
-        float GetAccYOffset () { return accYOffset };
-        float GetAccZOffset () { return accZOffset };
+        float GetAccXOffset () { return accXOffset; };
+        float GetAccYOffset () { return accYOffset; };
+        float GetAccZOffset () { return accZOffset; };
         void SetAccOffsets (float x, float y, float z);
 
-        int16_t GetRawAccX () { return rawAccX };
-        int16_t GetRawAccY () { return rawAccY };
-        int16_t GetRawAccZ () { return rawAccZ };
-        int16_t GetRawGyroX () { return rawGyroX };
-        int16_t GetRawGyroY () { return rawGyroY };
-        int16_t GetRawGyroZ () { return rawGyroZ };
+        int16_t GetRawAccX () { return rawAccX; };
+        int16_t GetRawAccY () { return rawAccY; };
+        int16_t GetRawAccZ () { return rawAccZ; };
+        int16_t GetRawGyroX () { return rawGyroX; };
+        int16_t GetRawGyroY () { return rawGyroY; };
+        int16_t GetRawGyroZ () { return rawGyroZ; };
 
-        float GetAccX () { return accX };
-        float GetAccY () { return accY };
-        float GetAccZ () { return accZ };
-        float GetGyroX () { return gyroX };
-        float GetGyroY () { return gyroY };
-        float GetGyroZ () { return gyroZ };
+        float GetAccX () { return accX; };
+        float GetAccY () { return accY; };
+        float GetAccZ () { return accZ; };
+        float GetGyroX () { return gyroX; };
+        float GetGyroY () { return gyroY; };
+        float GetGyroZ () { return gyroZ; };
 
-        float GetAngAccX () { return angAccX };
-        float GetAngAccY () { return angAccY };
-        float GetAngAccZ () { return angAccZ };
-        float GetAngGyroX () { return angGyroX };
-        float GetAngGyroY () { return angGyroY };
-        float GetAngGyroZ () { return angGyroZ };
+        float GetAngAccX () { return angAccX; };
+        float GetAngAccY () { return angAccY; };
+        float GetAngAccZ () { return angAccZ; };
+        float GetAngGyroX () { return angGyroX; };
+        float GetAngGyroY () { return angGyroY; };
+        float GetAngGyroZ () { return angGyroZ; };
 
-        float GetAngX () { return angX };
-        float GetAngY () { return angY };
-        float GetAngZ () { return angZ };
+        float GetAngX () { return angX; };
+        float GetAngY () { return angY; };
+        float GetAngZ () { return angZ; };
 
-        float GetFilterAccCoeff () { return filterAccelCoeff };
-        float GetFilterGyroCoeff () { return filterGyroCoeff };
+        float GetFilterAccCoeff () { return filterAccelCoeff; };
+        float GetFilterGyroCoeff () { return filterGyroCoeff; };
         void SetFilterAccCoeff (float coeff);
         void SetFilterGyroCoeff (float coeff);
 
@@ -148,4 +153,7 @@ class MPU6050 {
 
 		// Angle data w/ complementary filter
 		float angX, angY, angZ;
-}
+
+};
+
+#endif
