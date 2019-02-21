@@ -2,3 +2,6 @@
 .pioenvs
 .piolibdeps
 .vscode/
+include/
+lib/
+test/

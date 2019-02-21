@@ -45,10 +45,10 @@ void setup() {
 void loop() {
 
   mpu.Execute();
-  Serial.print("AngX = ")
+  Serial.print("AngX = ");
   Serial.print(mpu.GetAngX());
-  Serial.print("  /  AngY = ")
+  Serial.print("  /  AngY = ");
   Serial.print(mpu.GetAngY());
-  Serial.print("  /  AngZ = ")
-  Serial.print(mpu.GetAngZ());
+  Serial.print("  /  AngZ = ");
+  Serial.println(mpu.GetAngZ());
 }
