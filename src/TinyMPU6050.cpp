@@ -2,7 +2,6 @@
  *	Register map for the MPU6050 available at: https://www.invensense.com/wp-content/uploads/2015/02/MPU-6000-Register-Map1.pdf
  */
 #include "TinyMPU6050.h"
-#include "Arduino.h"
 
 /*
  *	Constructor
@@ -17,6 +16,9 @@ MPU6050::MPU6050(TwoWire &w) {
  *	Initialization method
  */
 void MPU6050::Initialize () {
+
+	// Beginning Wire
+	wire->begin();
 
 	// Setting attributes with default values
 	filterAccelCoeff = DEFAULT_ACCEL_COEFF;
@@ -44,6 +46,10 @@ void MPU6050::Initialize () {
 
 	// Beginning integration timer
 	intervalStart = millis();
+
+	// Setting deadzones
+	SetAccelDeadzone(DEFAULT_ACCEL_DEADZONE);
+	SetGyroDeadzone(DEFAULT_GYRO_DEADZONE);
 }
 
 /*
@@ -151,7 +157,7 @@ void MPU6050::RegisterWrite (byte registerAddress, byte data) {
 /*
  *	MPU-6050 calibration method inspired by https://42bots.com/tutorials/arduino-script-for-mpu-6050-auto-calibration/
  */
-void MPU6050::Calibrate () {
+void MPU6050::Calibrate (bool console = true) {
 
 	// Reading data (DISCARDED_MEASURES) times without storing
 	for (byte i = 0; i < DISCARDED_MEASURES; i++) {
@@ -218,40 +224,55 @@ void MPU6050::Calibrate () {
 		sumGyroY = (sumGyroY / CALIBRATION_MEASURES);
 		sumGyroZ = (sumGyroZ / CALIBRATION_MEASURES);
 
+		String notConverged = "";
+
 		// Checking if readings are on the deadzone and, eventually, fixing preOffsets
-		if (abs(sumAccX) <= ACCEL_DEADZONE_THRESHOLD) ready++;
+		if (abs(sumAccX) <= accelDeadzoneThreshold) ready++;
 		else {
-			preOffAccX = preOffAccX - sumAccX / ACCEL_DEADZONE_THRESHOLD;
+			notConverged.concat("AccX");
+			preOffAccX = preOffAccX - sumAccX / accelDeadzoneThreshold;
 		}
 
-		if (abs(sumAccY) <= ACCEL_DEADZONE_THRESHOLD) ready++;
+		if (abs(sumAccY) <= accelDeadzoneThreshold) ready++;
 		else {
-			preOffAccY = preOffAccY - sumAccY / ACCEL_DEADZONE_THRESHOLD;
+			notConverged.concat(" AccY");
+			preOffAccY = preOffAccY - sumAccY / accelDeadzoneThreshold;
 		}
 
-		if (abs(ACCEL_TRANSFORMATION_NUMBER - sumAccZ) <= ACCEL_DEADZONE_THRESHOLD) ready++;
+		if (abs(ACCEL_TRANSFORMATION_NUMBER - sumAccZ) <= accelDeadzoneThreshold) ready++;
 		else {
-			preOffAccZ = preOffAccZ - (ACCEL_TRANSFORMATION_NUMBER - sumAccZ) * (1 / ACCEL_DEADZONE_THRESHOLD);
+			notConverged.concat(" AccZ");
+			preOffAccZ = preOffAccZ - (ACCEL_TRANSFORMATION_NUMBER - sumAccZ) * (1 / accelDeadzoneThreshold);
 		}
 
-		if (abs(sumGyroX) <= GYRO_DEADZONE_THRESHOLD) ready++;
+		if (abs(sumGyroX) <= gyroDeadzoneThreshold) ready++;
 		else {
-			preOffGyroX = preOffGyroX - sumGyroX / (GYRO_DEADZONE_THRESHOLD + 1);
+			notConverged.concat(" GyX");
+			preOffGyroX = preOffGyroX - sumGyroX / (gyroDeadzoneThreshold + 1);
 		}
 
-		if (abs(sumGyroY) <= GYRO_DEADZONE_THRESHOLD) ready++;
+		if (abs(sumGyroY) <= gyroDeadzoneThreshold) ready++;
 		else {
-			preOffGyroY = preOffGyroY - sumGyroY / (GYRO_DEADZONE_THRESHOLD + 1);
+			notConverged.concat(" GyY");
+			preOffGyroY = preOffGyroY - sumGyroY / (gyroDeadzoneThreshold + 1);
 		}
 
-		if (abs(sumGyroZ) <= GYRO_DEADZONE_THRESHOLD) ready++;
+		if (abs(sumGyroZ) <= gyroDeadzoneThreshold) ready++;
 		else {
-			preOffGyroZ = preOffGyroZ - sumGyroZ / (GYRO_DEADZONE_THRESHOLD + 1);
+			notConverged.concat(" GyZ");
+			preOffGyroZ = preOffGyroZ - sumGyroZ / (gyroDeadzoneThreshold + 1);
 		}
 
 		loopCount++;
 
 		// Checking if everything's ready
+		if (console) {
+			Serial.print (loopCount);
+			Serial.print (" loops / ");
+			Serial.print (ready);
+			Serial.print (" axis calibrated. Missing: ");
+			Serial.println (notConverged);
+		}
 		if (ready == 6) {
 			calibrated = true;
 			break;
@@ -316,4 +337,24 @@ void MPU6050::SetFilterGyroCoeff (float coeff) {
 
 	// Setting coefficient
 	filterGyroCoeff = coeff;
+}
+
+/*
+ *	Set function for the accel deadzone
+ */
+void SetAccelDeadzone (float deadzone) {
+
+	// Setting deadzone
+	accelDeadzone = deadzone;
+	accelDeadzoneThreshold = accelDeadzone * ACCEL_TRANSFORMATION_NUMBER;
+}
+
+/*
+ *	Set function for the accel deadzone
+ */
+void SetGyroDeadzone (float deadzone) {
+
+	// Setting deadzone
+	gyroDeadzone = deadzone;
+	gyroDeadzoneThreshold = gyroDeadzone * GYRO_TRANSFORMATION_NUMBER;
 }

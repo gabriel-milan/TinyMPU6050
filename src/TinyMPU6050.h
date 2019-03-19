@@ -9,6 +9,7 @@
  */
 #include "Arduino.h"
 #include "Wire.h"
+#include <string.h>
 
 /*
  *	Default MPU6050 address
@@ -45,10 +46,8 @@
 #define CHECKING_MEASURES               50
 #define ACCEL_PREOFFSET_MAGIC_NUMBER    8
 #define GYRO_PREOFFSET_MAGIC_NUMBER     4
-#define ACCEL_DEADZONE                  0.002 // m/s²
-#define GYRO_DEADZONE                   0.015 // Degrees/second
-#define ACCEL_DEADZONE_THRESHOLD        ACCEL_DEADZONE * ACCEL_TRANSFORMATION_NUMBER
-#define GYRO_DEADZONE_THRESHOLD         GYRO_DEADZONE * GYRO_TRANSFORMATION_NUMBER
+#define DEFAULT_ACCEL_DEADZONE          0.002 // m/s²
+#define DEFAULT_GYRO_DEADZONE           0.015 // Degrees/second
 #define DEADZONE_ATTEMPTS               300
 
 /*
@@ -78,7 +77,7 @@ class MPU6050 {
 		void RegisterWrite (byte registerAddress, byte data);
 
 		// Calibrating MPU-6050 method
-		void Calibrate ();
+		void Calibrate (bool console);
 
 		// Gets and sets
         float GetGyroXOffset () { return gyroXOffset; };
@@ -121,6 +120,11 @@ class MPU6050 {
         void SetFilterAccCoeff (float coeff);
         void SetFilterGyroCoeff (float coeff);
 
+        float GetAccelDeadzone () { return accelDeadzone; };
+        float GetGyroDeadzone () { return gyroDeadzone; };
+        void SetAccelDeadzone (float deadzone);
+        void SetGyroDeadzone (float deadzone);
+
 	/*
 	 *	Private methods and attributes
 	 */
@@ -153,6 +157,9 @@ class MPU6050 {
 
 		// Angle data w/ complementary filter
 		float angX, angY, angZ;
+
+        // Deadzone stuff
+        float accelDeadzone, gyroDeadzone, accelDeadzoneThreshold, gyroDeadzoneThreshold;
 
 };
 
