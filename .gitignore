@@ -1,1 +1,5 @@
 *.yml
+examples/PlatformIO_All_Gets_Example/.vscode/
+examples/PlatformIO_All_Gets_Example/include/README
+examples/PlatformIO_All_Gets_Example/lib/README
+examples/PlatformIO_All_Gets_Example/test/README
