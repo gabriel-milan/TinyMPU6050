@@ -77,7 +77,7 @@ class MPU6050 {
 		void RegisterWrite (byte registerAddress, byte data);
 
 		// Calibrating MPU-6050 method
-		void Calibrate (bool console);
+		void Calibrate (bool console = true);
 
 		// Gets and sets
         float GetGyroXOffset () { return gyroXOffset; };

@@ -157,7 +157,7 @@ void MPU6050::RegisterWrite (byte registerAddress, byte data) {
 /*
  *	MPU-6050 calibration method inspired by https://42bots.com/tutorials/arduino-script-for-mpu-6050-auto-calibration/
  */
-void MPU6050::Calibrate (bool console = true) {
+void MPU6050::Calibrate (bool console) {
 
 	// Reading data (DISCARDED_MEASURES) times without storing
 	for (byte i = 0; i < DISCARDED_MEASURES; i++) {
@@ -168,7 +168,12 @@ void MPU6050::Calibrate (bool console = true) {
 	}
 
 	// Reading data (CALIBRATION_MEASURES) times adding its values to "long" vars
-	long sumAccX, sumAccY, sumAccZ, sumGyroX, sumGyroY, sumGyroZ = 0;
+	long sumAccX = 0;
+	long sumAccY = 0;
+	long sumAccZ = 0;
+	long sumGyroX = 0;
+	long sumGyroY = 0;
+	long sumGyroZ = 0;
 	for (int i = 0; i < CALIBRATION_MEASURES; i++) {
 		this->UpdateRawAccel();
 		this->UpdateRawGyro();
@@ -342,7 +347,7 @@ void MPU6050::SetFilterGyroCoeff (float coeff) {
 /*
  *	Set function for the accel deadzone
  */
-void SetAccelDeadzone (float deadzone) {
+void MPU6050::SetAccelDeadzone (float deadzone) {
 
 	// Setting deadzone
 	accelDeadzone = deadzone;
@@ -352,7 +357,7 @@ void SetAccelDeadzone (float deadzone) {
 /*
  *	Set function for the accel deadzone
  */
-void SetGyroDeadzone (float deadzone) {
+void MPU6050::SetGyroDeadzone (float deadzone) {
 
 	// Setting deadzone
 	gyroDeadzone = deadzone;
