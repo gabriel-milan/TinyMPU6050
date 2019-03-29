@@ -124,6 +124,7 @@ void setup() {
  */
 void loop() {
   
+  mpu.Execute();
   PrintGets();
   delay(30000); // 30 sec delay
 
