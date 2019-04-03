@@ -75,9 +75,9 @@ void MPU6050::Execute () {
 	float auxAccZ = (float)(ACCEL_TRANSFORMATION_NUMBER - rawAccZ - accZOffset) / ACCEL_TRANSFORMATION_NUMBER;
 
 	// Computing accel angles
-	angAccX = (atan2(-accY, -auxAccZ)) * RAD_TO_DEG;
-	angAccY = (atan2(-accX, -auxAccZ)) * RAD_TO_DEG;
-	angAccZ = (atan2(-accY, -accX)) * RAD_TO_DEG;
+	angAccX = (atan2(accY, auxAccZ)) * RAD_TO_DEG;
+	angAccY = (atan2(auxAccZ, accX)) * RAD_TO_DEG;
+	angAccZ = (atan2(accY, accX)) * RAD_TO_DEG;
 
 	// Computing gyro angles
 	dt = (millis() - intervalStart) * 0.001;
@@ -244,7 +244,7 @@ void MPU6050::Calibrate (bool console) {
 			preOffAccY = preOffAccY - sumAccY / accelDeadzoneThreshold;
 		}
 
-		if (abs(ACCEL_TRANSFORMATION_NUMBER - sumAccZ) <= accelDeadzoneThreshold) ready++;
+		if (abs(ACCEL_TRANSFORMATION_NUMBER - sumAccZ) <= zAccelDeadzoneThreshold) ready++;
 		else {
 			notConverged.concat(" AccZ");
 			preOffAccZ = preOffAccZ - (ACCEL_TRANSFORMATION_NUMBER - sumAccZ) * (1 / accelDeadzoneThreshold);
@@ -262,7 +262,7 @@ void MPU6050::Calibrate (bool console) {
 			preOffGyroY = preOffGyroY - sumGyroY / (gyroDeadzoneThreshold + 1);
 		}
 
-		if (abs(sumGyroZ) <= gyroDeadzoneThreshold) ready++;
+		if (abs(sumGyroZ) <= zGyroDeadzoneThreshold) ready++;
 		else {
 			notConverged.concat(" GyZ");
 			preOffGyroZ = preOffGyroZ - sumGyroZ / (gyroDeadzoneThreshold + 1);
@@ -355,11 +355,31 @@ void MPU6050::SetAccelDeadzone (float deadzone) {
 }
 
 /*
- *	Set function for the accel deadzone
+ *	Set function for the gyro deadzone
  */
 void MPU6050::SetGyroDeadzone (float deadzone) {
 
 	// Setting deadzone
 	gyroDeadzone = deadzone;
 	gyroDeadzoneThreshold = gyroDeadzone * GYRO_TRANSFORMATION_NUMBER;
+}
+
+/*
+ *	Set function for the Z-axis accel deadzone
+ */
+void MPU6050::SetZAccelDeadzone (float deadzone) {
+
+	// Setting deadzone
+	zAccelDeadzone = deadzone;
+	zAccelDeadzoneThreshold = zAccelDeadzone * ACCEL_TRANSFORMATION_NUMBER;
+}
+
+/*
+ *	Set function for the Z-axis gyro deadzone
+ */
+void MPU6050::SetZGyroDeadzone (float deadzone) {
+
+	// Setting deadzone
+	zGyroDeadzone = deadzone;
+	zGyroDeadzoneThreshold = zGyroDeadzone * GYRO_TRANSFORMATION_NUMBER;
 }

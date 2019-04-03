@@ -125,6 +125,11 @@ class MPU6050 {
         void SetAccelDeadzone (float deadzone);
         void SetGyroDeadzone (float deadzone);
 
+		float GetZAccelDeadzone () { return zAccelDeadzone; };
+        float GetZGyroDeadzone () { return zGyroDeadzone; };
+        void SetZAccelDeadzone (float deadzone);
+        void SetZGyroDeadzone (float deadzone);
+
 	/*
 	 *	Private methods and attributes
 	 */
@@ -160,6 +165,9 @@ class MPU6050 {
 
         // Deadzone stuff
         float accelDeadzone, gyroDeadzone, accelDeadzoneThreshold, gyroDeadzoneThreshold;
+
+		// Z-axis deadzone stuff
+		float zAccelDeadzone, zGyroDeadzone, zAccelDeadzoneThreshold, zGyroDeadzoneThreshold;
 
 };
 
