@@ -65,7 +65,9 @@ class MPU6050 {
 
         // Setup method
         void Initialize ();
+#ifdef ESP8266
         void Initialize (int sda, int scl);
+#endif
 
         // Method that updates all attributes
         void Execute ();
