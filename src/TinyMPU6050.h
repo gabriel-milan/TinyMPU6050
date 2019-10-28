@@ -60,11 +60,12 @@ class MPU6050 {
 	 */
 	public:
 
-		// Constructor
-		MPU6050 (TwoWire &w);
+        // Constructor
+        MPU6050 (TwoWire &w);
 
-		// Setup method
-		void Initialize ();
+        // Setup method
+        void Initialize ();
+        void Initialize (int sda, int scl);
 
         // Method that updates all attributes
         void Execute ();
@@ -169,6 +170,7 @@ class MPU6050 {
 		// Z-axis deadzone stuff
 		float zAccelDeadzone, zGyroDeadzone, zAccelDeadzoneThreshold, zGyroDeadzoneThreshold;
 
+        void BaseInititalize ();
 };
 
 #endif

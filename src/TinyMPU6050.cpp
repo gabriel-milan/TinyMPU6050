@@ -15,11 +15,22 @@ MPU6050::MPU6050(TwoWire &w) {
 /*
  *	Initialization method
  */
+
+void MPU6050::Initialize (int sda, int scl) {
+
+	// Beginning Wire
+	wire->begin(sda, scl);
+	BaseInititalize();
+}
+
 void MPU6050::Initialize () {
 
 	// Beginning Wire
 	wire->begin();
+	BaseInititalize();
+}
 
+void MPU6050::BaseInititalize () {
 	// Setting attributes with default values
 	filterAccelCoeff = DEFAULT_ACCEL_COEFF;
 	filterGyroCoeff = DEFAULT_GYRO_COEFF;
