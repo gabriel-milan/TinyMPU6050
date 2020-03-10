@@ -15,12 +15,6 @@ MPU6050 mpu (Wire);
 void PrintGets () {
   // Shows offsets
   Serial.println("--- Offsets:");
-  Serial.print("AccX Offset = ");
-  Serial.println(mpu.GetAccXOffset());
-  Serial.print("AccY Offset = ");
-  Serial.println(mpu.GetAccYOffset());
-  Serial.print("AccZ Offset = ");
-  Serial.println(mpu.GetAccZOffset());
   Serial.print("GyroX Offset = ");
   Serial.println(mpu.GetGyroXOffset());
   Serial.print("GyroY Offset = ");
@@ -93,14 +87,6 @@ void PrintGets () {
   Serial.print("Gyroscope percentage = ");
   Serial.print(mpu.GetFilterGyroCoeff());
   Serial.println('%');
-  // Show accel/gyro deadzones
-  Serial.println("--- Deadzone:");
-  Serial.print("Accelerometer deadzone = ");
-  Serial.print(mpu.GetAccelDeadzone());
-  Serial.println(" m/s²");
-  Serial.print("Gyroscope deadzone = ");
-  Serial.print(mpu.GetGyroDeadzone());
-  Serial.println(" degrees/second");
 }
 
 /*

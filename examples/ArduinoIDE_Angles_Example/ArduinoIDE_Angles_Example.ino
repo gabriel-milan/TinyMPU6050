@@ -24,12 +24,6 @@ void setup() {
   mpu.Calibrate();
   Serial.println("Calibration complete!");
   Serial.println("Offsets:");
-  Serial.print("AccX Offset = ");
-  Serial.println(mpu.GetAccXOffset());
-  Serial.print("AccY Offset = ");
-  Serial.println(mpu.GetAccYOffset());
-  Serial.print("AccZ Offset = ");
-  Serial.println(mpu.GetAccZOffset());
   Serial.print("GyroX Offset = ");
   Serial.println(mpu.GetGyroXOffset());
   Serial.print("GyroY Offset = ");

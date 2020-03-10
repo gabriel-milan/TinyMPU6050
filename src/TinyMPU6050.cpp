@@ -21,15 +21,26 @@ void MPU6050::Initialize (int sda, int scl) {
 
 	// Beginning Wire
 	wire->begin(sda, scl);
-	BaseInititalize();
+	this->BaseInititalize();
 }
 #endif
+
+/*
+ *	Wrap an angle to the interval [-180, +180]
+ *  --> Suggestion by edgar-bonet at https://github.com/gabriel-milan/TinyMPU6050/issues/6
+ */
+static float wrap(float angle)
+{
+	while (angle > +180) angle -= 360;
+	while (angle < -180) angle += 360;
+	return angle;
+}
 
 void MPU6050::Initialize () {
 
 	// Beginning Wire
 	wire->begin();
-	BaseInititalize();
+	this->BaseInititalize();
 }
 
 void MPU6050::BaseInititalize () {
@@ -38,19 +49,19 @@ void MPU6050::BaseInititalize () {
 	filterGyroCoeff = DEFAULT_GYRO_COEFF;
 
 	// Setting sample rate divider
-	RegisterWrite(MPU6050_SMPLRT_DIV, 0x00);
+	this->RegisterWrite(MPU6050_SMPLRT_DIV, 0x00);
 
 	// Setting frame synchronization and the digital low-pass filter
-	RegisterWrite(MPU6050_CONFIG, 0x00);
+	this->RegisterWrite(MPU6050_CONFIG, 0x00);
 
 	// Setting gyro self-test and full scale range
-	RegisterWrite(MPU6050_GYRO_CONFIG, 0x08);
+	this->RegisterWrite(MPU6050_GYRO_CONFIG, 0x08);
 
 	// Setting accelerometer self-test and full scale range
-	RegisterWrite(MPU6050_ACCEL_CONFIG, 0x00);
+	this->RegisterWrite(MPU6050_ACCEL_CONFIG, 0x00);
 
 	// Waking up MPU6050
-	RegisterWrite(MPU6050_PWR_MGMT_1, 0x01);
+	this->RegisterWrite(MPU6050_PWR_MGMT_1, 0x01);
 
 	// Setting angles to zero
 	angX = 0;
@@ -59,10 +70,6 @@ void MPU6050::BaseInititalize () {
 
 	// Beginning integration timer
 	intervalStart = millis();
-
-	// Setting deadzones
-	SetAccelDeadzone(DEFAULT_ACCEL_DEADZONE);
-	SetGyroDeadzone(DEFAULT_GYRO_DEADZONE);
 }
 
 /*
@@ -74,34 +81,28 @@ void MPU6050::Execute () {
 	this->UpdateRawAccel();
 	this->UpdateRawGyro();
 
-	// TODO:
-	// - Complementary filter angles.
-
 	// Computing readable accel/gyro data
-	accX = (float)(rawAccX - accXOffset) / ACCEL_TRANSFORMATION_NUMBER;
-	accY = (float)(rawAccY - accYOffset) / ACCEL_TRANSFORMATION_NUMBER;
-	accZ = (float)(rawAccZ - accZOffset) / ACCEL_TRANSFORMATION_NUMBER;
+	accX = (float)(rawAccX) / ACCEL_TRANSFORMATION_NUMBER;
+	accY = (float)(rawAccY) / ACCEL_TRANSFORMATION_NUMBER;
+	accZ = (float)(rawAccZ) / ACCEL_TRANSFORMATION_NUMBER;
 	gyroX = (float)(rawGyroX - gyroXOffset) / GYRO_TRANSFORMATION_NUMBER;
 	gyroY = (float)(rawGyroY - gyroYOffset) / GYRO_TRANSFORMATION_NUMBER;
 	gyroZ = (float)(rawGyroZ - gyroZOffset) / GYRO_TRANSFORMATION_NUMBER;
 
-	float auxAccZ = (float)(ACCEL_TRANSFORMATION_NUMBER - rawAccZ - accZOffset) / ACCEL_TRANSFORMATION_NUMBER;
-
 	// Computing accel angles
-	angAccX = (atan2(accY, auxAccZ)) * RAD_TO_DEG;
-	angAccY = (atan2(auxAccZ, accX)) * RAD_TO_DEG;
-	angAccZ = (atan2(accY, accX)) * RAD_TO_DEG;
+	angAccX = wrap((atan2(accY, sqrt(accZ * accZ + accX * accX))) * RAD_TO_DEG);
+	angAccY = wrap((-atan2(accX, sqrt(accZ * accZ + accY * accY))) * RAD_TO_DEG);
 
 	// Computing gyro angles
 	dt = (millis() - intervalStart) * 0.001;
-	angGyroX += gyroX * dt;
-	angGyroY += gyroY * dt;
-	angGyroZ += gyroZ * dt;
+	angGyroX += wrap(gyroX * dt);
+	angGyroY += wrap(gyroY * dt);
+	angGyroZ += wrap(gyroZ * dt);
 
 	// Computing complementary filter angles
-	angX = (filterAccelCoeff * angAccX) + (filterGyroCoeff * (angX + gyroX * dt));
-	angY = (filterAccelCoeff * angAccY) + (filterGyroCoeff * (angY + gyroY * dt));
-	angZ = (filterAccelCoeff * angAccZ) + (filterGyroCoeff * (angZ + gyroZ * dt));
+	angX = wrap((filterAccelCoeff * angAccX) + (filterGyroCoeff * (angX + gyroX * dt)));
+	angY = wrap((filterAccelCoeff * angAccY) + (filterGyroCoeff * (angY + gyroY * dt)));
+	angZ = angGyroZ;
 
 	// Reseting the integration timer
 	intervalStart = millis();
@@ -123,9 +124,14 @@ void MPU6050::UpdateRawAccel () {
 	wire->requestFrom((int) MPU6050_ADDRESS, 6, (int) true);
 
 	// Storing raw accel data
-	rawAccX = wire->read() << 8 | wire->read();
-	rawAccY = wire->read() << 8 | wire->read();
-	rawAccZ = wire->read() << 8 | wire->read();
+	rawAccX = wire->read() << 8;
+	rawAccX |= wire->read();
+
+	rawAccY = wire->read() << 8;
+	rawAccY |= wire->read();
+
+	rawAccZ = wire->read() << 8;
+	rawAccZ |= wire->read();
 }
 
 /*
@@ -144,8 +150,11 @@ void MPU6050::UpdateRawGyro () {
 	wire->requestFrom((int) MPU6050_ADDRESS, 6, (int) true);
 
 	// Storing raw gyro data
-	rawGyroX = wire->read() << 8 | wire->read();
-	rawGyroY = wire->read() << 8 | wire->read();
+	rawGyroX = wire->read() << 8;
+	rawGyroX |= wire->read();
+
+	rawGyroY = wire->read() << 8;
+	rawGyroY |= wire->read();
 	rawGyroZ = wire->read() << 8 | wire->read();
 }
 
@@ -170,151 +179,32 @@ void MPU6050::RegisterWrite (byte registerAddress, byte data) {
 /*
  *	MPU-6050 calibration method inspired by https://42bots.com/tutorials/arduino-script-for-mpu-6050-auto-calibration/
  */
-void MPU6050::Calibrate (bool console) {
+void MPU6050::Calibrate () {
 
-	// Reading data (DISCARDED_MEASURES) times without storing
-	for (byte i = 0; i < DISCARDED_MEASURES; i++) {
+	for (int i = 0; i < DISCARDED_MEASURES; i++) {
 		this->UpdateRawAccel();
 		this->UpdateRawGyro();
-		// Recommended delay for new reading
 		delay(2);
 	}
 
-	// Reading data (CALIBRATION_MEASURES) times adding its values to "long" vars
-	long sumAccX = 0;
-	long sumAccY = 0;
-	long sumAccZ = 0;
-	long sumGyroX = 0;
-	long sumGyroY = 0;
-	long sumGyroZ = 0;
+	float sumGyroX = 0;
+	float sumGyroY = 0;
+	float sumGyroZ = 0;
+	
 	for (int i = 0; i < CALIBRATION_MEASURES; i++) {
 		this->UpdateRawAccel();
 		this->UpdateRawGyro();
-		sumAccX += rawAccX;
-		sumAccY += rawAccY;
-		sumAccZ += rawAccZ;
-		sumGyroX += rawGyroX;
-		sumGyroY += rawGyroY;
-		sumGyroZ += rawGyroZ;
-		// Recommended delay for new reading
+		sumGyroX += this->GetRawGyroX();
+		sumGyroY += this->GetRawGyroY();
+		sumGyroZ += this->GetRawGyroZ();
 		delay(2);
 	}
 
-	// Dividing sums by (CALIBRATION_MEASURES) and definig "preOffsets"
-	int16_t preOffAccX, preOffAccY, preOffAccZ, preOffGyroX, preOffGyroY, preOffGyroZ = 0;
-	preOffAccX = (sumAccX / CALIBRATION_MEASURES) / ACCEL_PREOFFSET_MAGIC_NUMBER;
-	preOffAccY = (sumAccY / CALIBRATION_MEASURES) / ACCEL_PREOFFSET_MAGIC_NUMBER;
-	preOffAccZ = (ACCEL_TRANSFORMATION_NUMBER - (sumAccZ / CALIBRATION_MEASURES)) / ACCEL_PREOFFSET_MAGIC_NUMBER;
-	preOffGyroX = (sumGyroX / CALIBRATION_MEASURES) / GYRO_PREOFFSET_MAGIC_NUMBER;
-	preOffGyroY = (sumGyroY / CALIBRATION_MEASURES) / GYRO_PREOFFSET_MAGIC_NUMBER;
-	preOffGyroZ = (sumGyroZ / CALIBRATION_MEASURES) / GYRO_PREOFFSET_MAGIC_NUMBER;
+	sumGyroX  /= CALIBRATION_MEASURES;
+	sumGyroY  /= CALIBRATION_MEASURES;
+	sumGyroZ  /= CALIBRATION_MEASURES;
 
-	long loopCount = 0;
-	bool calibrated = false;
-	// Checking if readings are on the deadzone. If they are not, fix them
-	while (true) {
-
-		// Control variables
-		byte ready = 0;
-
-		// Setting sums to zero
-		sumAccX, sumAccY, sumAccZ, sumGyroX, sumGyroY, sumGyroZ = 0; 
-
-		// Making few readings, summing values and subtracting preOffsets
-		for (byte i = 0; i < CHECKING_MEASURES; i++) {
-			this->UpdateRawAccel();
-			this->UpdateRawGyro();
-			sumAccX += rawAccX - preOffAccX;
-			sumAccY += rawAccY - preOffAccY;
-			sumAccZ += rawAccZ - preOffAccZ;
-			sumGyroX += rawGyroX - preOffGyroX;
-			sumGyroY += rawGyroY - preOffGyroY;
-			sumGyroZ += rawGyroZ - preOffGyroZ;
-			// Recommended delay for new reading
-			delay(2);
-		}
-
-		// Computing averages
-		sumAccX = (sumAccX / CALIBRATION_MEASURES);
-		sumAccY = (sumAccY / CALIBRATION_MEASURES);
-		sumAccZ = (ACCEL_TRANSFORMATION_NUMBER - (sumAccZ / CALIBRATION_MEASURES));
-		sumGyroX = (sumGyroX / CALIBRATION_MEASURES);
-		sumGyroY = (sumGyroY / CALIBRATION_MEASURES);
-		sumGyroZ = (sumGyroZ / CALIBRATION_MEASURES);
-
-		String notConverged = "";
-
-		// Checking if readings are on the deadzone and, eventually, fixing preOffsets
-		if (abs(sumAccX) <= accelDeadzoneThreshold) ready++;
-		else {
-			notConverged.concat("AccX");
-			preOffAccX = preOffAccX - sumAccX / accelDeadzoneThreshold;
-		}
-
-		if (abs(sumAccY) <= accelDeadzoneThreshold) ready++;
-		else {
-			notConverged.concat(" AccY");
-			preOffAccY = preOffAccY - sumAccY / accelDeadzoneThreshold;
-		}
-
-		if (abs(ACCEL_TRANSFORMATION_NUMBER - sumAccZ) <= zAccelDeadzoneThreshold) ready++;
-		else {
-			notConverged.concat(" AccZ");
-			preOffAccZ = preOffAccZ - (ACCEL_TRANSFORMATION_NUMBER - sumAccZ) * (1 / accelDeadzoneThreshold);
-		}
-
-		if (abs(sumGyroX) <= gyroDeadzoneThreshold) ready++;
-		else {
-			notConverged.concat(" GyX");
-			preOffGyroX = preOffGyroX - sumGyroX / (gyroDeadzoneThreshold + 1);
-		}
-
-		if (abs(sumGyroY) <= gyroDeadzoneThreshold) ready++;
-		else {
-			notConverged.concat(" GyY");
-			preOffGyroY = preOffGyroY - sumGyroY / (gyroDeadzoneThreshold + 1);
-		}
-
-		if (abs(sumGyroZ) <= zGyroDeadzoneThreshold) ready++;
-		else {
-			notConverged.concat(" GyZ");
-			preOffGyroZ = preOffGyroZ - sumGyroZ / (gyroDeadzoneThreshold + 1);
-		}
-
-		loopCount++;
-
-		// Checking if everything's ready
-		if (console) {
-			Serial.print (loopCount);
-			Serial.print (" loops / ");
-			Serial.print (ready);
-			Serial.print (" axis calibrated. Missing: ");
-			Serial.println (notConverged);
-		}
-		if (ready == 6) {
-			calibrated = true;
-			break;
-		}
-		if (loopCount >= DEADZONE_ATTEMPTS) break;
-	}
-
-	if (calibrated == false) {
-		this->Calibrate();
-	}
-	else {
-
-		// Setting the offsets
-		this->SetAccOffsets(preOffAccX, preOffAccY, preOffAccZ);
-		this->SetGyroOffsets(preOffGyroX, preOffGyroY, preOffGyroZ);
-
-		// Executing one loop
-		this->Execute();
-
-		// Setting angle as accAngle
-		angX = this->GetAngAccX();
-		angY = this->GetAngAccY();
-		angZ = this->GetAngAccZ();
-	}
+	this->SetGyroOffsets(sumGyroX, sumGyroY, sumGyroZ);
 }
 
 /*
@@ -326,17 +216,6 @@ void MPU6050::SetGyroOffsets (float x, float y, float z) {
 	gyroXOffset = x;
 	gyroYOffset = y;
 	gyroZOffset = z;
-}
-
-/*
- *	Set function for accel offsets
- */
-void MPU6050::SetAccOffsets (float x, float y, float z) {
-
-	// Setting offsets
-	accXOffset = x;
-	accYOffset = y;
-	accZOffset = z;
 }
 
 /*
@@ -355,44 +234,4 @@ void MPU6050::SetFilterGyroCoeff (float coeff) {
 
 	// Setting coefficient
 	filterGyroCoeff = coeff;
-}
-
-/*
- *	Set function for the accel deadzone
- */
-void MPU6050::SetAccelDeadzone (float deadzone) {
-
-	// Setting deadzone
-	accelDeadzone = deadzone;
-	accelDeadzoneThreshold = accelDeadzone * ACCEL_TRANSFORMATION_NUMBER;
-}
-
-/*
- *	Set function for the gyro deadzone
- */
-void MPU6050::SetGyroDeadzone (float deadzone) {
-
-	// Setting deadzone
-	gyroDeadzone = deadzone;
-	gyroDeadzoneThreshold = gyroDeadzone * GYRO_TRANSFORMATION_NUMBER;
-}
-
-/*
- *	Set function for the Z-axis accel deadzone
- */
-void MPU6050::SetZAccelDeadzone (float deadzone) {
-
-	// Setting deadzone
-	zAccelDeadzone = deadzone;
-	zAccelDeadzoneThreshold = zAccelDeadzone * ACCEL_TRANSFORMATION_NUMBER;
-}
-
-/*
- *	Set function for the Z-axis gyro deadzone
- */
-void MPU6050::SetZGyroDeadzone (float deadzone) {
-
-	// Setting deadzone
-	zGyroDeadzone = deadzone;
-	zGyroDeadzoneThreshold = zGyroDeadzone * GYRO_TRANSFORMATION_NUMBER;
 }

@@ -9,7 +9,6 @@
  */
 #include "Arduino.h"
 #include "Wire.h"
-#include <string.h>
 
 /*
  *	Default MPU6050 address
@@ -46,9 +45,6 @@
 #define CHECKING_MEASURES               50
 #define ACCEL_PREOFFSET_MAGIC_NUMBER    8
 #define GYRO_PREOFFSET_MAGIC_NUMBER     4
-#define DEFAULT_ACCEL_DEADZONE          0.002 // m/s²
-#define DEFAULT_GYRO_DEADZONE           0.015 // Degrees/second
-#define DEADZONE_ATTEMPTS               300
 
 /*
  *	Class
@@ -60,78 +56,63 @@ class MPU6050 {
 	 */
 	public:
 
-        // Constructor
-        MPU6050 (TwoWire &w);
+		// Constructor
+		MPU6050 (TwoWire &w);
 
-        // Setup method
-        void Initialize ();
+		// Setup method
+		void Initialize ();
+
 #ifdef ESP8266
-        void Initialize (int sda, int scl);
+		void Initialize (int sda, int scl);
 #endif
 
-        // Method that updates all attributes
-        void Execute ();
+		// Method that updates all attributes
+		void Execute ();
 
-        // Raw data update methods
-        void UpdateRawAccel ();
-        void UpdateRawGyro ();
+		// Raw data update methods
+		void UpdateRawAccel ();
+		void UpdateRawGyro ();
 
 		// Register write method
 		void RegisterWrite (byte registerAddress, byte data);
 
 		// Calibrating MPU-6050 method
-		void Calibrate (bool console = true);
+		void Calibrate ();
 
 		// Gets and sets
-        float GetGyroXOffset () { return gyroXOffset; };
-        float GetGyroYOffset () { return gyroYOffset; };
-        float GetGyroZOffset () { return gyroZOffset; };
-        void SetGyroOffsets (float x, float y, float z);
+		float GetGyroXOffset () { return gyroXOffset; };
+		float GetGyroYOffset () { return gyroYOffset; };
+		float GetGyroZOffset () { return gyroZOffset; };
+		void SetGyroOffsets (float x, float y, float z);
 
-        float GetAccXOffset () { return accXOffset; };
-        float GetAccYOffset () { return accYOffset; };
-        float GetAccZOffset () { return accZOffset; };
-        void SetAccOffsets (float x, float y, float z);
+		int16_t GetRawAccX () { return rawAccX; };
+		int16_t GetRawAccY () { return rawAccY; };
+		int16_t GetRawAccZ () { return rawAccZ; };
+		int16_t GetRawGyroX () { return rawGyroX; };
+		int16_t GetRawGyroY () { return rawGyroY; };
+		int16_t GetRawGyroZ () { return rawGyroZ; };
 
-        int16_t GetRawAccX () { return rawAccX; };
-        int16_t GetRawAccY () { return rawAccY; };
-        int16_t GetRawAccZ () { return rawAccZ; };
-        int16_t GetRawGyroX () { return rawGyroX; };
-        int16_t GetRawGyroY () { return rawGyroY; };
-        int16_t GetRawGyroZ () { return rawGyroZ; };
+		float GetAccX () { return accX; };
+		float GetAccY () { return accY; };
+		float GetAccZ () { return accZ; };
+		float GetGyroX () { return gyroX; };
+		float GetGyroY () { return gyroY; };
+		float GetGyroZ () { return gyroZ; };
 
-        float GetAccX () { return accX; };
-        float GetAccY () { return accY; };
-        float GetAccZ () { return accZ; };
-        float GetGyroX () { return gyroX; };
-        float GetGyroY () { return gyroY; };
-        float GetGyroZ () { return gyroZ; };
+		float GetAngAccX () { return angAccX; };
+		float GetAngAccY () { return angAccY; };
+		float GetAngGyroX () { return angGyroX; };
+		float GetAngGyroY () { return angGyroY; };
+		float GetAngGyroZ () { return angGyroZ; };
 
-        float GetAngAccX () { return angAccX; };
-        float GetAngAccY () { return angAccY; };
-        float GetAngAccZ () { return angAccZ; };
-        float GetAngGyroX () { return angGyroX; };
-        float GetAngGyroY () { return angGyroY; };
-        float GetAngGyroZ () { return angGyroZ; };
+		float GetAngX () { return angX; };
+		float GetAngY () { return angY; };
+		float GetAngZ () { return angZ; };
 
-        float GetAngX () { return angX; };
-        float GetAngY () { return angY; };
-        float GetAngZ () { return angZ; };
-
-        float GetFilterAccCoeff () { return filterAccelCoeff; };
-        float GetFilterGyroCoeff () { return filterGyroCoeff; };
-        void SetFilterAccCoeff (float coeff);
-        void SetFilterGyroCoeff (float coeff);
-
-        float GetAccelDeadzone () { return accelDeadzone; };
-        float GetGyroDeadzone () { return gyroDeadzone; };
-        void SetAccelDeadzone (float deadzone);
-        void SetGyroDeadzone (float deadzone);
-
-		float GetZAccelDeadzone () { return zAccelDeadzone; };
-        float GetZGyroDeadzone () { return zGyroDeadzone; };
-        void SetZAccelDeadzone (float deadzone);
-        void SetZGyroDeadzone (float deadzone);
+		float GetFilterAccCoeff () { return filterAccelCoeff; };
+		float GetFilterGyroCoeff () { return filterGyroCoeff; };
+		void SetFilterAccCoeff (float coeff);
+		void SetFilterGyroCoeff (float coeff);
 
 	/*
 	 *	Private methods and attributes
@@ -144,9 +125,6 @@ class MPU6050 {
 		// Gyroscope offsets
 		float gyroXOffset, gyroYOffset, gyroZOffset;
 
-        // Accelerometer offsets
-        float accXOffset, accYOffset, accZOffset;
-
 		// Raw accel and gyro data
 		int16_t rawAccX, rawAccY, rawAccZ, rawGyroX, rawGyroY, rawGyroZ;
 
@@ -158,7 +136,7 @@ class MPU6050 {
 		float dt;
 
 		// Angle data according to accel and gyro (separately)
-		float angGyroX, angGyroY, angGyroZ, angAccX, angAccY, angAccZ;
+		float angGyroX, angGyroY, angGyroZ, angAccX, angAccY;
 
 		// Complememtary filter accel and gyro coefficients
 		float filterAccelCoeff, filterGyroCoeff;
@@ -166,13 +144,7 @@ class MPU6050 {
 		// Angle data w/ complementary filter
 		float angX, angY, angZ;
 
-        // Deadzone stuff
-        float accelDeadzone, gyroDeadzone, accelDeadzoneThreshold, gyroDeadzoneThreshold;
-
-		// Z-axis deadzone stuff
-		float zAccelDeadzone, zGyroDeadzone, zAccelDeadzoneThreshold, zGyroDeadzoneThreshold;
-
-        void BaseInititalize ();
+		void BaseInititalize ();
 };
 
 #endif
