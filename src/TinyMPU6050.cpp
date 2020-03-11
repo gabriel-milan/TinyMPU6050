@@ -36,6 +36,16 @@ static float wrap(float angle)
 	return angle;
 }
 
+/*
+ *	Compute the weighted average of a (with weight wa)
+ *	and b (weight wb), treating both a and b as angles.
+ *	It is assumed the sum of the weights is 1.
+ */
+static float angle_average(float wa, float a, float wb, float b)
+{
+	return wrap(wa * a + wb * (a + wrap(b-a)));
+}
+
 void MPU6050::Initialize () {
 
 	// Beginning Wire
@@ -95,13 +105,13 @@ void MPU6050::Execute () {
 
 	// Computing gyro angles
 	dt = (millis() - intervalStart) * 0.001;
-	angGyroX += wrap(gyroX * dt);
-	angGyroY += wrap(gyroY * dt);
-	angGyroZ += wrap(gyroZ * dt);
+	angGyroX = wrap(angGyroX + gyroX * dt);
+	angGyroY = wrap(angGyroY + gyroY * dt);
+	angGyroZ = wrap(angGyroZ + gyroZ * dt);
 
 	// Computing complementary filter angles
-	angX = wrap((filterAccelCoeff * angAccX) + (filterGyroCoeff * (angX + gyroX * dt)));
-	angY = wrap((filterAccelCoeff * angAccY) + (filterGyroCoeff * (angY + gyroY * dt)));
+	angX = angle_average(filterAccelCoeff, angAccX, filterGyroCoeff, angX + gyroX * dt);
+	angY = angle_average(filterAccelCoeff, angAccY, filterGyroCoeff, angY + gyroY * dt);
 	angZ = angGyroZ;
 
 	// Reseting the integration timer
