@@ -155,7 +155,9 @@ void MPU6050::UpdateRawGyro () {
 
 	rawGyroY = wire->read() << 8;
 	rawGyroY |= wire->read();
-	rawGyroZ = wire->read() << 8 | wire->read();
+
+	rawGyroZ = wire->read() << 8;
+	rawGyroZ |= wire->read();
 }
 
 /*
