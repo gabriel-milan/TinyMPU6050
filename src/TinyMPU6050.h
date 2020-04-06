@@ -13,7 +13,9 @@
 /*
  *	Default MPU6050 address
  */
-#define MPU6050_ADDRESS     	0x68
+#define MPU6050_ADDRESS_LOW    	0x68
+#define MPU6050_ADDRESS_HIGH 	0x69
+#define MPU6050_ADDRESS     	MPU6050_ADDRESS_LOW
 
 /*
  *	Configuration registers
@@ -57,7 +59,7 @@ class MPU6050 {
 	public:
 
 		// Constructor
-		MPU6050 (TwoWire &w);
+		MPU6050 (TwoWire &w,int i2cAddress = MPU6050_ADDRESS);
 
 		// Setup method
 		void Initialize ();
@@ -121,6 +123,8 @@ class MPU6050 {
 
 		// I²C stuff
 		TwoWire *wire;
+
+		int address;
 
 		// Gyroscope offsets
 		float gyroXOffset, gyroYOffset, gyroZOffset;
