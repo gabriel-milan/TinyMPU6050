@@ -6,10 +6,16 @@
 /*
  *	Constructor
  */
-MPU6050::MPU6050(TwoWire &w) {
+MPU6050::MPU6050(TwoWire &w,int i2cAddress) {
 
 	// Setting I²C stuff
 	wire = &w;
+	if(i2cAddress == MPU6050_ADDRESS_LOW || i2cAddress == MPU6050_ADDRESS_HIGH){
+		address = i2cAddress;
+	} else{
+		address = MPU6050_ADDRESS_LOW;
+	}
+	
 }
 
 /*
@@ -124,14 +130,14 @@ void MPU6050::Execute () {
 void MPU6050::UpdateRawAccel () {
 
 	// Beginning transmission for MPU6050
-	wire->beginTransmission(MPU6050_ADDRESS);
+	wire->beginTransmission(address);
 
 	// Accessing accel data registers
 	wire->write(MPU6050_ACCEL_XOUT_H);
 	wire->endTransmission(false);
 
 	// Requesting accel data
-	wire->requestFrom((int) MPU6050_ADDRESS, 6, (int) true);
+	wire->requestFrom(address, 6, (int) true);
 
 	// Storing raw accel data
 	rawAccX = wire->read() << 8;
@@ -150,14 +156,14 @@ void MPU6050::UpdateRawAccel () {
 void MPU6050::UpdateRawGyro () {
 
 	// Beginning transmission for MPU6050
-	wire->beginTransmission(MPU6050_ADDRESS);
+	wire->beginTransmission(address);
 
 	// Accessing gyro data registers
 	wire->write(MPU6050_GYRO_XOUT_H);
 	wire->endTransmission(false);
 
 	// Requesting gyro data
-	wire->requestFrom((int) MPU6050_ADDRESS, 6, (int) true);
+	wire->requestFrom(address, 6, (int) true);
 
 	// Storing raw gyro data
 	rawGyroX = wire->read() << 8;
@@ -176,7 +182,7 @@ void MPU6050::UpdateRawGyro () {
 void MPU6050::RegisterWrite (byte registerAddress, byte data) {
 
 	// Starting transmission for MPU6050
-	wire->beginTransmission(MPU6050_ADDRESS);
+	wire->beginTransmission(address);
 
 	// Accessing register
 	wire->write(registerAddress);
