@@ -61,8 +61,6 @@ void PrintGets () {
   Serial.println(mpu.GetAngAccX());
   Serial.print("AccelAngY = ");
   Serial.println(mpu.GetAngAccY());
-  Serial.print("AccelAngZ = ");
-  Serial.println(mpu.GetAngAccZ());
   // Show angles based on gyroscope only
   Serial.println("--- Gyro angles:");
   Serial.print("GyroAngX = ");
