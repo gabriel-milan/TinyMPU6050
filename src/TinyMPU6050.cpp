@@ -98,12 +98,12 @@ void MPU6050::Execute () {
 	this->UpdateRawGyro();
 
 	// Computing readable accel/gyro data
-	accX = (float)(rawAccX) / ACCEL_TRANSFORMATION_NUMBER;
-	accY = (float)(rawAccY) / ACCEL_TRANSFORMATION_NUMBER;
-	accZ = (float)(rawAccZ) / ACCEL_TRANSFORMATION_NUMBER;
-	gyroX = (float)(rawGyroX - gyroXOffset) / GYRO_TRANSFORMATION_NUMBER;
-	gyroY = (float)(rawGyroY - gyroYOffset) / GYRO_TRANSFORMATION_NUMBER;
-	gyroZ = (float)(rawGyroZ - gyroZOffset) / GYRO_TRANSFORMATION_NUMBER;
+	accX = (float)(rawAccX) * ACCEL_TRANSFORMATION_NUMBER;
+	accY = (float)(rawAccY) * ACCEL_TRANSFORMATION_NUMBER;
+	accZ = (float)(rawAccZ) * ACCEL_TRANSFORMATION_NUMBER;
+	gyroX = (float)(rawGyroX - gyroXOffset) * GYRO_TRANSFORMATION_NUMBER;
+	gyroY = (float)(rawGyroY - gyroYOffset) * GYRO_TRANSFORMATION_NUMBER;
+	gyroZ = (float)(rawGyroZ - gyroZOffset) * GYRO_TRANSFORMATION_NUMBER;
 
 	// Computing accel angles
 	angAccX = wrap((atan2(accY, sqrt(accZ * accZ + accX * accX))) * RAD_TO_DEG);

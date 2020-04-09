@@ -36,8 +36,8 @@
  *  Macros
  */
 // For execution
-#define ACCEL_TRANSFORMATION_NUMBER     16384
-#define GYRO_TRANSFORMATION_NUMBER      65.536
+#define ACCEL_TRANSFORMATION_NUMBER     0.00006103515 // (1 / 16384) precalculated
+#define GYRO_TRANSFORMATION_NUMBER      0.01525878906 // (1 / 65.536) precalculated
 // For digital filter
 #define DEFAULT_ACCEL_COEFF             0.02f
 #define DEFAULT_GYRO_COEFF              0.98f
