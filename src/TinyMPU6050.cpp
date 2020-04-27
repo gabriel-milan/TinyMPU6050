@@ -195,15 +195,176 @@ void MPU6050::RegisterWrite (byte registerAddress, byte data) {
 }
 
 /*
- *	MPU-6050 calibration method inspired by https://42bots.com/tutorials/arduino-script-for-mpu-6050-auto-calibration/
+ *	MPU-6050 calibration method inspired by https://forum.arduino.cc/index.php?topic=619352.0
  */
 void MPU6050::Calibrate () {
 
+	// Values from method
+	double kPGyro = 0.6;
+	double kIGyro = 50;
+	double kPAccel = 0.15;
+	double kIAccel = 8;
+	float MPUOffsets[6];
+	static float ITerm[6] = {0, 0, 0, 0, 0, 0};
+	static float ITermReadings[10][6];
+	int ReadingDetailTime = 1000;
+	int Tries = 0;
+	uint32_t ITermLastSum;
+	int ITermSameCtr;
+	int ITermSameCtr2;
+	int ITermSameCtrMax = 100;
+	int TestCtr = 0;
+	int ITermSameCtrLimit1 = 5;
+	int ITermSameCtrLimit2 = 10  ;
+	unsigned long DetailsTimer;
+
+	// Discarding few measures
 	for (int i = 0; i < DISCARDED_MEASURES; i++) {
 		this->UpdateRawAccel();
 		this->UpdateRawGyro();
 		delay(2);
 	}
+	this -> SetAccelOffsets(0, 0, 0);
+	this -> SetGyroOffsets (0, 0, 0);
+
+	// PI Variables
+	float Error[6];
+	float PTerm[6];
+	float DTerm[6] = {0, 0, 0, 0, 0, 0};
+	float g[3];
+	float a[3];
+	int ax, ay, az, gx, gy, gz;
+	long error;
+	uint32_t ITermSum;
+	DetailsTimer = millis();
+
+	// Calibration loop
+	while (1) {
+
+		Tries++;
+		this->UpdateRawAccel();
+		this->UpdateRawGyro();
+		ax = this->GetRawAccX();
+		ay = this->GetRawAccY();
+		az = this->GetRawAccZ();
+		gx = this->GetRawGyroX();
+		gy = this->GetRawGyroY();
+		gz = this->GetRawGyroZ();
+		az -= 16384; //remove Gravity
+
+		if (Tries == 1) { // Set it close and get a new reading
+
+			this->UpdateRawAccel();
+			this->UpdateRawGyro();
+			ax = this->GetRawAccX();
+			ay = this->GetRawAccY();
+			az = this->GetRawAccZ();
+			gx = this->GetRawGyroX();
+			gy = this->GetRawGyroY();
+			gz = this->GetRawGyroZ();
+			az -= 16384; //remove Gravity
+
+			this->SetAccelOffsets( -(ax >> 3), -(ay >> 3), -(az >> 3) );
+			this->SetGyroOffsets( -(gx >> 2), -(gy >> 2), -(gz >> 2) );
+
+			this->UpdateRawAccel();
+			this->UpdateRawGyro();
+			ax = this->GetRawAccX();
+			ay = this->GetRawAccY();
+			az = this->GetRawAccZ();
+			gx = this->GetRawGyroX();
+			gy = this->GetRawGyroY();
+			gz = this->GetRawGyroZ();
+			az -= 16384; //remove Gravity
+
+			// Prime PI Loop
+			ITerm[0] = -(ax);
+			ITerm[1] = -(ay);
+			ITerm[2] = -(az);
+			ITerm[3] = -(gx);
+			ITerm[4] = -(gy);
+			ITerm[5] = -(gz);
+			DetailsTimer = millis();
+		}
+		else {
+
+			a[0] = ax;
+			a[1] = ay;
+			a[2] = az;
+			g[0] = gx;
+			g[1] = gy;
+			g[2] = gz;
+			ITermSum = 0;
+
+			for (int i = 0; i < 6; i++) ITermSum += abs(ITerm[i]);
+
+			ITermSameCtr = (ITermSum == ITermLastSum) ? (ITermSameCtr + 1) : 0;
+			ITermSameCtr2 = (ITermSum == ITermLastSum) ? (ITermSameCtr2 + 1) : 0;
+			ITermLastSum = ITermSum;
+			ITermSameCtrMax = max (ITermSameCtrMax, ITermSameCtr);
+
+			if (((millis() - DetailsTimer) >= (ReadingDetailTime)) || (ITermSameCtr2 >= ITermSameCtrLimit2)) {
+
+				DetailsTimer = millis();
+
+				if ((ITermSameCtr >= ITermSameCtrLimit1) || (ITermSameCtr2 >= ITermSameCtrLimit2)) {
+
+					ITermSameCtr = 0;
+
+					if ((ITermSameCtr2 >= ITermSameCtrLimit2)) {
+
+						for (int i = 0; i < 6; i++) {
+							ITermReadings[TestCtr % 10][i] = ITerm[i];// % is remainder after division. This prevents us from counting over 9 (0-9) 10/10 remainder = 0
+						}
+
+						// Failed to calibrate
+						return;
+					}
+
+					// Re-tune PID and run again
+					ReadingDetailTime  *= .95;
+					kPGyro = kPGyro * 0.5;
+					kIGyro = kIGyro * 0.5;
+					kPAccel = kPAccel * 0.5;
+					kIAccel = kIAccel * 0.5;
+					DetailsTimer = millis();
+				}
+				ReadingDetailTime  *= .60;
+				kPGyro = kPGyro * 0.70;
+				kIGyro = kIGyro * 0.70;
+				kPAccel = kPAccel * 0.70;
+				kIAccel = kIAccel * 0.70;
+			}
+			/* PI of PID Calculations */
+			for (int i = 0; i < 3; i++) { // PI Calculations
+				// Accellerometer
+				Error[i] = 0 - a[i] ;
+				PTerm[i] = kPAccel * Error[i ];
+				ITerm[i] += Error[i] * 0.002 * kIAccel; // Integral term 1000 Calculations a second = 0.001
+				MPUOffsets[i] = (PTerm[i] + ITerm[i] ); //Compute PID Output
+				// Gyro
+				Error[i + 3] = 0 - g[i];
+				PTerm[i + 3] = kPGyro *  Error[i + 3];
+				ITerm[i + 3] += Error[i + 3] *  0.002 * kIGyro; // Integral term 1000 Calculations a second = 0.001
+				MPUOffsets[i + 3] = (PTerm[i + 3] + ITerm[i + 3]); //Compute PID Output
+			}
+			this->SetAccelOffsets( round(MPUOffsets[0] / 8), round(MPUOffsets[1] / 8), round(MPUOffsets[2] / 8) );
+			this->SetGyroOffsets( round(MPUOffsets[3] / 4), round(MPUOffsets[4] / 4), round(MPUOffsets[5]) / 4 );
+			// get another reading for next loop
+		}
+		delay(2);
+	};
+
+	// Success
+	return;
+
+
+
+
+
+
+
+
 
 	float sumGyroX = 0;
 	float sumGyroY = 0;
@@ -223,6 +384,17 @@ void MPU6050::Calibrate () {
 	sumGyroZ  /= CALIBRATION_MEASURES;
 
 	this->SetGyroOffsets(sumGyroX, sumGyroY, sumGyroZ);
+}
+
+/*
+ *	Set function for accel offsets
+ */
+void MPU6050::SetAccelOffsets (float x, float y, float z) {
+
+	// Setting offsets
+	accelXOffset = x;
+	accelYOffset = y;
+	accelZOffset = z;
 }
 
 /*

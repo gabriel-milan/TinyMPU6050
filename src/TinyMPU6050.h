@@ -82,6 +82,10 @@ class MPU6050 {
 		void Calibrate ();
 
 		// Gets and sets
+		float GetAccelXOffset () { return accelXOffset; };
+		float GetAccelYOffset () { return accelYOffset; };
+		float GetAccelZOffset () { return accelZOffset; };
+		void SetAccelOffsets (float x, float y, float z);
 		float GetGyroXOffset () { return gyroXOffset; };
 		float GetGyroYOffset () { return gyroYOffset; };
 		float GetGyroZOffset () { return gyroZOffset; };
@@ -127,7 +131,7 @@ class MPU6050 {
 		int address;
 
 		// Gyroscope offsets
-		float gyroXOffset, gyroYOffset, gyroZOffset;
+		float accelXOffset, accelYOffset, accelZOffset, gyroXOffset, gyroYOffset, gyroZOffset;
 
 		// Raw accel and gyro data
 		int16_t rawAccX, rawAccY, rawAccZ, rawGyroX, rawGyroY, rawGyroZ;
