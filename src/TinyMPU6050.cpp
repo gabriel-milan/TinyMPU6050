@@ -357,33 +357,6 @@ void MPU6050::Calibrate () {
 
 	// Success
 	return;
-
-
-
-
-
-
-
-
-
-	float sumGyroX = 0;
-	float sumGyroY = 0;
-	float sumGyroZ = 0;
-	
-	for (int i = 0; i < CALIBRATION_MEASURES; i++) {
-		this->UpdateRawAccel();
-		this->UpdateRawGyro();
-		sumGyroX += this->GetRawGyroX();
-		sumGyroY += this->GetRawGyroY();
-		sumGyroZ += this->GetRawGyroZ();
-		delay(2);
-	}
-
-	sumGyroX  /= CALIBRATION_MEASURES;
-	sumGyroY  /= CALIBRATION_MEASURES;
-	sumGyroZ  /= CALIBRATION_MEASURES;
-
-	this->SetGyroOffsets(sumGyroX, sumGyroY, sumGyroZ);
 }
 
 /*
